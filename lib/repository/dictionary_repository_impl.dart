@@ -1,4 +1,5 @@
 import 'package:api_dictionary/commons/app_paths.dart';
+import 'package:api_dictionary/models/data.dart';
 import 'package:api_dictionary/models/word.dart';
 import 'package:api_dictionary/repository/dictionary_repository.dart';
 import 'package:dio/dio.dart';
@@ -8,12 +9,14 @@ class DictionaryRepositoryImpl extends DictionaryRepository{
   DictionaryRepositoryImpl({required this.dio});
 
   @override
-  Future<Word> getWord({required String searchWord}) async {
-    final Response<List<dynamic>> response = await dio.get('${AppPaths.endPoint}/$searchWord');
+  Future<Data<Word>> getWord({required String searchWord}) async {
+    final Response<dynamic> response = await dio.get('${AppPaths.endPoint}/$searchWord');
     if(response.statusCode == 200){
-      return Word.fromJson(response.data!.first);
+      return Success(data: Word.fromJson(response.data!.first));
+    }else if(response.statusCode == 404){
+      return Failure(errorMessage: response.data['message']);
     }else{
-      return Word();
+      return Failure(errorMessage: 'Something wrong happened');
     }
   }
 

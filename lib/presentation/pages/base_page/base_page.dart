@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:api_dictionary/commons/app_colors.dart';
 import 'package:api_dictionary/commons/app_constants.dart';
 import 'package:api_dictionary/commons/app_styles.dart';
 import 'package:api_dictionary/commons/asset_paths.dart';
+import 'package:api_dictionary/enums/internet_state.dart';
 import 'package:api_dictionary/presentation/widgets/asset_icon.dart';
+import 'package:api_dictionary/presentation/widgets/no_internet_box.dart';
 import 'package:api_dictionary/presentation/widgets/ripple_effect.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,6 +42,7 @@ abstract class BasePageState<Page extends BasePage> extends State<Page>{
 
   List<Widget> actions() => [];
 
+
   FloatingActionButton? floatingButton() => FloatingActionButton(
     onPressed: (){},
     elevation: AppConstants.elevationZero,
@@ -43,9 +50,9 @@ abstract class BasePageState<Page extends BasePage> extends State<Page>{
     child: const Icon(Icons.add, color: AppColors.white),
   );
 
-  Widget leading() => RippleEffect(
+  Widget leading() => CupertinoButton(
     onPressed: () => Navigator.of(context).maybePop(),
-    child: const AssetIcon(icon: AssetPaths.icBack, size: AppConstants.iconDefaultSize, color: AppColors.black),
+    child: const Icon(CupertinoIcons.chevron_back, color: AppColors.white),
   );
 
   void initStateBase() => (){};
@@ -58,6 +65,8 @@ abstract class BasePageState<Page extends BasePage> extends State<Page>{
 mixin RootPage<Page extends BasePage> on BasePageState<Page>{
   late double widthScreen;
   late double heightScreen;
+  late StreamSubscription internetSubscription;
+  InternetState internetState = InternetState.connected;
 
   @override
   void initState() {
@@ -66,12 +75,28 @@ mixin RootPage<Page extends BasePage> on BasePageState<Page>{
     WidgetsBinding.instance.addPostFrameCallback((_) {
       buildUICompleted();
     });
+    handleInternetState();
   }
 
   @override
   void dispose() {
     super.dispose();
     disposeStateBase();
+    internetSubscription.cancel();
+  }
+
+  Future<void> handleInternetState() async{
+    final result = await Connectivity().checkConnectivity();
+    internetState = result == ConnectivityResult.none ? InternetState.disconnected : InternetState.connected;
+    internetSubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+      if(result == ConnectivityResult.none){
+        internetState = InternetState.disconnected;
+      }else if(result == ConnectivityResult.wifi || result == ConnectivityResult.mobile){
+        internetState = InternetState.connected;
+      }
+      setState(() {});
+    });
+    setState(() {});
   }
 
   Widget buildUi();
@@ -100,7 +125,17 @@ mixin RootPage<Page extends BasePage> on BasePageState<Page>{
           ),
         ),
         body: SafeArea(
-          child: buildUi(),
+          child: Stack(
+            children: [
+              buildUi(),
+              if(internetState == InternetState.disconnected) const Positioned(
+                bottom: 10,
+                left: 0,
+                right: 0,
+                child: NoInternetBox(),
+              ),
+            ],
+          ),
         ),
       ) : AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(
@@ -110,7 +145,17 @@ mixin RootPage<Page extends BasePage> on BasePageState<Page>{
         child: Scaffold(
           backgroundColor: backGroundColor(),
           body: SafeArea(
-            child: buildUi(),
+            child: Stack(
+              children: [
+                buildUi(),
+                if(internetState == InternetState.disconnected) const Positioned(
+                  bottom: 10,
+                  left: 0,
+                  right: 0,
+                  child: NoInternetBox(),
+                ),
+              ],
+            ),
           ),
           floatingActionButton: useFloatingButton() ? floatingButton() : null,
         ),

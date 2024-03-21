@@ -1,5 +1,6 @@
+import 'package:api_dictionary/models/data.dart';
 import 'package:api_dictionary/models/word.dart';
 
 abstract class DictionaryRepository{
-  Future<Word> getWord({required String searchWord});
+  Future<Data<Word>> getWord({required String searchWord});
 }

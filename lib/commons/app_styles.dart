@@ -11,11 +11,13 @@ class AppStyles{
     double? fontSize,
     FontWeight? fontWeight,
     TextDecoration? decoration,
+    FontStyle? fontStyle,
 }) => TextStyle(
     fontFamily: AssetPaths.appFont,
     color: color ?? AppColors.black,
     fontSize: fontSize ?? AppConstants.fontDefaultSize,
     fontWeight: fontWeight ?? FontWeight.w500,
     decoration: decoration ?? TextDecoration.none,
+    fontStyle: fontStyle,
   );
 }

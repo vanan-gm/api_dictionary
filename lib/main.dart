@@ -1,7 +1,11 @@
+import 'package:api_dictionary/blocs/word_bloc/word_bloc.dart';
+import 'package:api_dictionary/injector.dart';
 import 'package:api_dictionary/presentation/pages/home_page/home_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-void main() {
+Future<void> main() async{
+  await setUpInjector();
   runApp(const MyApp());
 }
 
@@ -10,10 +14,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'E-E Dictionary',
-      home: HomePage(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<WordBloc>(
+          create: (_) => getIt<WordBloc>(),
+        )
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'E-E Dictionary',
+        home: HomePage(),
+      ),
     );
   }
 }

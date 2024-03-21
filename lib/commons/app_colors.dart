@@ -14,5 +14,5 @@ class AppColors{
   static const Color purple = Color(0XFF800080);
   static const Color orange = Color(0XFFFFA500);
   static const Color crimson = Color(0XFFE51A4C);
-  static const Color onyx = Color(0XFF818589);
+  static const Color onyx = Color(0XFF979797);
 }

@@ -15,6 +15,7 @@ class AppConstants{
   static const double fontBigSize = 16;
   static const double fontLargeSize = 17;
   static const double fontHugeSize = 18;
+  static const double fontGiantSize = 24;
 
   // Elevations
   static const double elevationZero = 0.0;
@@ -37,6 +38,7 @@ class AppConstants{
   static double paddingBig = AppConstants.widthScreen * .04;
   static double paddingLarge = AppConstants.widthScreen * .05;
   static double paddingHuge = AppConstants.widthScreen * .08;
+  static double paddingGiant = AppConstants.widthScreen * .1;
 
   // Radius
   static const double radiusImage = 5.0;
@@ -47,4 +49,7 @@ class AppConstants{
 
   // Icon BoxConstraint
   static const double suffixWith = 50;
+
+  // Radius
+  static const Duration responseTimeout = Duration(seconds: 30);
 }

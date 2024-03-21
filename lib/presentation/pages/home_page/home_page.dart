@@ -1,14 +1,21 @@
+import 'package:api_dictionary/blocs/word_bloc/word_bloc.dart';
+import 'package:api_dictionary/blocs/word_bloc/word_event.dart';
+import 'package:api_dictionary/blocs/word_bloc/word_state.dart';
 import 'package:api_dictionary/commons/app_colors.dart';
 import 'package:api_dictionary/commons/app_constants.dart';
 import 'package:api_dictionary/commons/app_styles.dart';
 import 'package:api_dictionary/commons/asset_paths.dart';
-import 'package:api_dictionary/helper/dio_helper.dart';
+import 'package:api_dictionary/enums/internet_state.dart';
 import 'package:api_dictionary/models/word.dart';
 import 'package:api_dictionary/presentation/pages/base_page/base_page.dart';
 import 'package:api_dictionary/presentation/widgets/asset_icon.dart';
+import 'package:api_dictionary/presentation/widgets/dummy_word_box.dart';
 import 'package:api_dictionary/presentation/widgets/search_box.dart';
-import 'package:api_dictionary/repository/dictionary_repository_impl.dart';
+import 'package:api_dictionary/presentation/widgets/word_box.dart';
+import 'package:api_dictionary/utils/dialog_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HomePage extends BasePage {
   const HomePage({super.key});
@@ -20,7 +27,10 @@ class HomePage extends BasePage {
 class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTickerProviderStateMixin{
   final TextEditingController _searchCtrl = TextEditingController();
   late TabController _tabController;
-  Word? word;
+  Word? _word;
+  List<Meanings> _listMeanings = [];
+  String _errorMessage = '';
+  late WordBloc _bloc;
 
   @override
   Widget appBarWidget() => Text('E-E Dictionary', style: AppStyles.appStyle(color: AppColors.white, fontSize: AppConstants.fontAppBarSize));
@@ -55,13 +65,18 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
       child: SearchBox(
         controller: _searchCtrl,
         onSearch: () async{
-          final DictionaryRepositoryImpl repo = DictionaryRepositoryImpl(dio: DioHelper().dio);
-          final result = await repo.getWord(searchWord: _searchCtrl.text.trim());
-          word = result;
-          setState(() {});
+          if(internetState != InternetState.disconnected){
+            _bloc.add(GetWordDefinitionEvent(word: _searchCtrl.text.trim()));
+          }else{
+            DialogUtils.showNetworkErrorDialog(context);
+          }
         },
         onClearSearch: () => setState(() {
-          word = null;
+          _word = null;
+          _listMeanings = [];
+          _errorMessage = '';
+          _tabController.index = 0;
+          _bloc.add(ResetSearchWordEvent());
         }),
       ),
     ),
@@ -71,6 +86,20 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(length: sections.length, vsync: this);
+    _bloc = BlocProvider.of<WordBloc>(context);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _bloc.close();
+    _tabController.dispose();
+    _searchCtrl.dispose();
+  }
+
+  void handleOnTapSectionBar(int index){
+    if(_word == null) return;
+    _bloc.add(FilterWordTypeEvent(word: _word!, filterType: sections[index]));
   }
 
   @override
@@ -85,6 +114,7 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
             child: TabBar(
               isScrollable: true,
               controller: _tabController,
+              onTap: handleOnTapSectionBar,
               indicatorSize: TabBarIndicatorSize.label,
               tabAlignment: TabAlignment.start,
               indicatorColor: AppColors.crimson,
@@ -93,14 +123,58 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
             ),
           ),
           Expanded(
-            child: word != null && word!.word.isNotEmpty ? Column(
-              children: List.generate(word!.meanings.length, (index){
-                return ListTile(
-                  leading: const AssetIcon(icon: AssetPaths.icSphere, size: AppConstants.iconDefaultSize, color: AppColors.crimson),
-                  title: Text(word!.meanings[index].definitions.first.definition, style: AppStyles.appStyle()),
-                );
-              }),
-            ) : const SizedBox(),
+            child: BlocConsumer<WordBloc, WordState>(
+              builder: (context, state){
+                if(state is WordLoadingState){
+                  return Shimmer.fromColors(
+                    baseColor: AppColors.grey.withOpacity(.85),
+                    highlightColor: AppColors.grey.withOpacity(.45),
+                    child: ListView.builder(
+                      itemCount: 5,
+                      itemBuilder: (context, index){
+                        return const DummyWordBox();
+                      },
+                    ),
+                  );
+                }else if(state is WordSuccessState){
+                  return ListView.builder(
+                    itemCount: state.data.data.meanings.length,
+                    itemBuilder: (context, index){
+                      return WordBox(word: state.data.data, meanings: state.data.data.meanings[index]);
+                    }
+                  );
+                }else if(state is WordFailureState){
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
+                    child: Center(
+                      child: Text(state.failure.errorMessage, style: AppStyles.appStyle(), textAlign: TextAlign.center,)
+                    )
+                  );
+                }else if(state is WordAfterFilerState){
+                  return state.word.meanings.isNotEmpty ? ListView.builder(
+                    itemCount: state.word.meanings.length,
+                    itemBuilder: (context, index){
+                      return WordBox(word: state.word, meanings: state.word.meanings[index]);
+                    }
+                  ) : Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
+                    child: Center(
+                      child: Text('Your word definitions do not have this type', style: AppStyles.appStyle(), textAlign: TextAlign.center,)
+                    )
+                  );
+                }else{
+                  return const SizedBox();
+                }
+              },
+              listener: (context, state){
+                if(state is WordSuccessState){
+                  _word = state.data.data;
+                }else if(state is WordFailureState){
+                  _word = null;
+                }
+                setState(() {});
+              },
+            ),
           ),
         ],
       ),

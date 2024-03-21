@@ -31,6 +31,15 @@ class Word {
       meanings: meanings,
     );
   }
+
+  Word copyWith({String? word, List<Meanings>? meanings, List<Phonetics>? phonetics, String? phonetic}){
+    return Word(
+      word: word ?? this.word,
+      meanings: meanings != null ? List.from(meanings) : List.from(this.meanings),
+      phonetics: phonetics != null ? List.from(phonetics) : List.from(this.phonetics),
+      phonetic: phonetic ?? this.phonetic,
+    );
+  }
 }
 
 class Phonetics {
