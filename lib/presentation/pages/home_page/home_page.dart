@@ -104,80 +104,97 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
 
   @override
   Widget buildUi() {
-    return DefaultTabController(
-      length: sections.length,
-      child: Column(
-        children: [
-          SizedBox(
-            width: widthScreen,
-            height: 50,
-            child: TabBar(
-              isScrollable: true,
-              controller: _tabController,
-              onTap: handleOnTapSectionBar,
-              indicatorSize: TabBarIndicatorSize.label,
-              tabAlignment: TabAlignment.start,
-              indicatorColor: AppColors.crimson,
-              dividerColor: AppColors.white,
-              tabs: List.generate(sections.length, (index) => Tab(child: Text(sections[index], style: AppStyles.appStyle()),)),
+    return Column(
+      children: [
+        Container(
+          width: widthScreen,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: AppColors.crimson,
+            borderRadius: BorderRadius.only(
+              bottomRight: Radius.circular(AppConstants.radiusRound),
+              bottomLeft: Radius.circular(AppConstants.radiusRound),
             ),
           ),
-          Expanded(
-            child: BlocConsumer<WordBloc, WordState>(
-              builder: (context, state){
-                if(state is WordLoadingState){
-                  return Shimmer.fromColors(
-                    baseColor: AppColors.grey.withOpacity(.85),
-                    highlightColor: AppColors.grey.withOpacity(.45),
-                    child: ListView.builder(
-                      itemCount: 5,
-                      itemBuilder: (context, index){
-                        return const DummyWordBox();
-                      },
-                    ),
-                  );
-                }else if(state is WordSuccessState){
-                  return ListView.builder(
-                    itemCount: state.data.data.meanings.length,
-                    itemBuilder: (context, index){
-                      return WordBox(word: state.data.data, meanings: state.data.data.meanings[index]);
-                    }
-                  );
-                }else if(state is WordFailureState){
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
-                    child: Center(
-                      child: Text(state.failure.errorMessage, style: AppStyles.appStyle(), textAlign: TextAlign.center,)
-                    )
-                  );
-                }else if(state is WordAfterFilerState){
-                  return state.word.meanings.isNotEmpty ? ListView.builder(
-                    itemCount: state.word.meanings.length,
-                    itemBuilder: (context, index){
-                      return WordBox(word: state.word, meanings: state.word.meanings[index]);
-                    }
-                  ) : Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
-                    child: Center(
-                      child: Text('Your word definitions do not have this type', style: AppStyles.appStyle(), textAlign: TextAlign.center,)
-                    )
-                  );
-                }else{
-                  return const SizedBox();
-                }
-              },
-              listener: (context, state){
-                if(state is WordSuccessState){
-                  _word = state.data.data;
-                }else if(state is WordFailureState){
-                  _word = null;
-                }
-                setState(() {});
-              },
+        ),
+        Expanded(
+          child: DefaultTabController(
+            length: sections.length,
+            child: Column(
+              children: [
+                SizedBox(
+                  width: widthScreen,
+                  height: 50,
+                  child: TabBar(
+                    isScrollable: true,
+                    controller: _tabController,
+                    onTap: handleOnTapSectionBar,
+                    indicatorSize: TabBarIndicatorSize.label,
+                    tabAlignment: TabAlignment.start,
+                    indicatorColor: AppColors.crimson,
+                    dividerColor: AppColors.white,
+                    tabs: List.generate(sections.length, (index) => Tab(child: Text(sections[index], style: AppStyles.appStyle()),)),
+                  ),
+                ),
+                Expanded(
+                  child: BlocConsumer<WordBloc, WordState>(
+                    builder: (context, state){
+                      if(state is WordLoadingState){
+                        return Shimmer.fromColors(
+                          baseColor: AppColors.grey.withOpacity(.85),
+                          highlightColor: AppColors.grey.withOpacity(.45),
+                          child: ListView.builder(
+                            itemCount: 5,
+                            itemBuilder: (context, index){
+                              return const DummyWordBox();
+                            },
+                          ),
+                        );
+                      }else if(state is WordSuccessState){
+                        return ListView.builder(
+                          itemCount: state.data.data.meanings.length,
+                          itemBuilder: (context, index){
+                            return WordBox(word: state.data.data, meanings: state.data.data.meanings[index]);
+                          }
+                        );
+                      }else if(state is WordFailureState){
+                        return Padding(
+                          padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
+                          child: Center(
+                            child: Text(state.failure.errorMessage, style: AppStyles.appStyle(), textAlign: TextAlign.center,)
+                          )
+                        );
+                      }else if(state is WordAfterFilerState){
+                        return state.word.meanings.isNotEmpty ? ListView.builder(
+                          itemCount: state.word.meanings.length,
+                          itemBuilder: (context, index){
+                            return WordBox(word: state.word, meanings: state.word.meanings[index]);
+                          }
+                        ) : Padding(
+                          padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
+                          child: Center(
+                            child: Text('Your word definitions do not have this type', style: AppStyles.appStyle(), textAlign: TextAlign.center,)
+                          )
+                        );
+                      }else{
+                        return const SizedBox();
+                      }
+                    },
+                    listener: (context, state){
+                      if(state is WordSuccessState){
+                        _word = state.data.data;
+                      }else if(state is WordFailureState){
+                        _word = null;
+                      }
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

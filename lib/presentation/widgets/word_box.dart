@@ -18,7 +18,7 @@ class WordBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RippleEffect(
-      onPressed: onTap ?? () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => DetailPage(word: word))),
+      onPressed: onTap ?? () => Navigator.of(context).push(CupertinoPageRoute(builder: (_) => DetailPage(word: word, chosenType: meanings.partOfSpeech.toLowerCase(),))),
       radius: AppConstants.radiusContainer,
       child: ListTile(
         leading: const AssetIcon(icon: AssetPaths.icSphere, size: AppConstants.iconTinySize, color: AppColors.crimson),
