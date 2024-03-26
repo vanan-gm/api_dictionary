@@ -1,5 +1,6 @@
 import 'package:api_dictionary/commons/app_colors.dart';
 import 'package:api_dictionary/commons/app_constants.dart';
+import 'package:api_dictionary/commons/app_paths.dart';
 import 'package:api_dictionary/commons/app_styles.dart';
 import 'package:api_dictionary/commons/asset_paths.dart';
 import 'package:api_dictionary/extensions/string_ext.dart';
@@ -7,8 +8,11 @@ import 'package:api_dictionary/models/word.dart';
 import 'package:api_dictionary/presentation/pages/base_page/base_page.dart';
 import 'package:api_dictionary/presentation/widgets/asset_icon.dart';
 import 'package:api_dictionary/presentation/widgets/ripple_effect.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:api_dictionary/utils/toast_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DetailPage extends BasePage {
   final Word word;
@@ -37,6 +41,7 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
       });
     });
     setDataFromType();
+    setDataForAudio();
     setState(() {});
   }
 
@@ -53,6 +58,15 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
         _definitions = item.definitions;
         _synonyms = item.synonyms;
         _antonyms = item.antonyms;
+      }
+    }
+  }
+
+  Future<void> setDataForAudio() async{
+    for(var item in widget.word.phonetics){
+      if(item.audio.isNotEmpty){
+        await _audioPlayer.setUrl(item.audio);
+        return;
       }
     }
   }
@@ -93,16 +107,25 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 functionBox(icon: AssetPaths.icVoice, title: 'Voice', onTap: () async{
-                  for(var item in widget.word.phonetics){
-                    if(item.audio.isNotEmpty){
-                      await _audioPlayer.play(UrlSource(item.audio));
-                      return;
+                  bool loaded = _audioPlayer.processingState == ProcessingState.ready ||
+                    _audioPlayer.processingState == ProcessingState.completed ||
+                    _audioPlayer.processingState == ProcessingState.buffering;
+                  if(loaded){
+                    if(_audioPlayer.playing){
+                      _audioPlayer.seek(Duration.zero);
+                    }else{
+                      _audioPlayer.play();
                     }
                   }
                 }),
                 functionBox(icon: AssetPaths.icEmptyStar, title: 'Save', onTap: (){}),
-                functionBox(icon: AssetPaths.icShare, title: 'Share', onTap: (){}),
-                functionBox(icon: AssetPaths.icCopy, title: 'Copy', onTap: (){}),
+                functionBox(icon: AssetPaths.icShare, title: 'Share', onTap: (){
+                  Share.share('${AppPaths.dictionaryUrl}/${widget.word.word}');
+                }),
+                functionBox(icon: AssetPaths.icCopy, title: 'Copy', onTap: () async{
+                  await Clipboard.setData(ClipboardData(text: widget.word.word));
+                  ToastUtils.showSuccessToast();
+                }),
               ],
             ),
           )
@@ -152,61 +175,41 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      Padding(
+                      definitionSection(),
+                      _synonyms.isNotEmpty ? Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: AppConstants.paddingLarge,
                           vertical: AppConstants.paddingLarge,
                         ),
                         child: ListView.builder(
-                          itemCount: _definitions.length,
+                          itemCount: _synonyms.length,
                           itemBuilder: (context, index){
                             return Container(
                               padding: EdgeInsets.symmetric(
-                                vertical: AppConstants.paddingDefault,
+                                vertical: AppConstants.paddingSmall,
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${index + 1}. ${_definitions[index].definition.upperCaseFirstLetter()}', style: AppStyles.appStyle()),
-                                  Padding(
-                                    padding: EdgeInsets.only(
-                                      top: AppConstants.paddingSmall,
-                                      left: AppConstants.paddingDefault,
-                                    ),
-                                    child: IntrinsicHeight(
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 2,
-                                            decoration: ShapeDecoration(
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                                              color: const Color(0x7f9e9e9e),
-                                            ),
-                                            margin: EdgeInsets.only(
-                                              right: AppConstants.paddingSmall,
-                                            ),
-                                          ),
-                                          Expanded(
-                                            child: Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: AppConstants.paddingTiny,
-                                              ),
-                                              child: Text(_definitions[index].example.isNotEmpty ? _definitions[index].example : 'There are no examples for this definition',
-                                                style: AppStyles.appStyle(color: AppColors.onyx, fontStyle: FontStyle.italic),),
-                                            )
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              child: Text('${index + 1}. ${_synonyms[index].upperCaseFirstLetter()}', style: AppStyles.appStyle()),
                             );
                           },
                         ),
-                      ),
-                      Center(child: Text('Second Page', style: AppStyles.appStyle(),)),
-                      Center(child: Text('Third Page', style: AppStyles.appStyle(),)),
+                      ) : Center(child: Text('We cannot find any synonyms \nfor this word', style: AppStyles.appStyle(), textAlign: TextAlign.center,)),
+                      _antonyms.isNotEmpty ? Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppConstants.paddingLarge,
+                          vertical: AppConstants.paddingLarge,
+                        ),
+                        child: ListView.builder(
+                          itemCount: _antonyms.length,
+                          itemBuilder: (context, index){
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppConstants.paddingSmall,
+                              ),
+                              child: Text('${index + 1}. ${_antonyms[index].upperCaseFirstLetter()}', style: AppStyles.appStyle()),
+                            );
+                          },
+                        ),
+                      ) : Center(child: Text('We cannot find any antonyms \nfor this word', style: AppStyles.appStyle(), textAlign: TextAlign.center,)),
                     ],
                   ),
                 )
@@ -242,6 +245,62 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
             )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget definitionSection(){
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingLarge,
+        vertical: AppConstants.paddingLarge,
+      ),
+      child: ListView.builder(
+        itemCount: _definitions.length,
+        itemBuilder: (context, index){
+          return Container(
+            padding: EdgeInsets.symmetric(
+              vertical: AppConstants.paddingDefault,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${index + 1}. ${_definitions[index].definition.upperCaseFirstLetter()}', style: AppStyles.appStyle()),
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: AppConstants.paddingSmall,
+                    left: AppConstants.paddingDefault,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 2,
+                          decoration: ShapeDecoration(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                            color: const Color(0x7f9e9e9e),
+                          ),
+                          margin: EdgeInsets.only(
+                            right: AppConstants.paddingSmall,
+                          ),
+                        ),
+                        Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppConstants.paddingTiny,
+                              ),
+                              child: Text(_definitions[index].example.isNotEmpty ? _definitions[index].example : 'There are no examples for this definition',
+                                style: AppStyles.appStyle(color: AppColors.onyx, fontStyle: FontStyle.italic),),
+                            )
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
