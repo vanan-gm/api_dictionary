@@ -17,6 +17,7 @@ class AssetPaths{
   static const String icFullStar = 'assets/icons/ic_full_star.png';
   static const String icShare = 'assets/icons/ic_share.png';
   static const String icVoice = 'assets/icons/ic_voice.png';
+  static const String icClock = 'assets/icons/ic_clock.png';
 
   // Lotties
   static const String ltError = 'assets/lotties/lottie_error.json';

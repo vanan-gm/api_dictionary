@@ -47,9 +47,15 @@ class AppConstants{
   static const double radiusRound = 20.0;
   static const double radiusCircle = 50.0;
 
+  // Size
+  static const double dotSize = 8;
+
   // Icon BoxConstraint
   static const double suffixWith = 50;
 
   // Radius
   static const Duration responseTimeout = Duration(seconds: 30);
+
+  // Other Constants
+  static const String recentWordsList = 'recentWordsList';
 }

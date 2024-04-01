@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:api_dictionary/blocs/word_bloc/word_bloc.dart';
 import 'package:api_dictionary/blocs/word_bloc/word_event.dart';
 import 'package:api_dictionary/blocs/word_bloc/word_state.dart';
 import 'package:api_dictionary/commons/app_colors.dart';
 import 'package:api_dictionary/commons/app_constants.dart';
+import 'package:api_dictionary/commons/app_preferences.dart';
 import 'package:api_dictionary/commons/app_styles.dart';
 import 'package:api_dictionary/commons/asset_paths.dart';
 import 'package:api_dictionary/enums/internet_state.dart';
@@ -28,9 +31,8 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
   final TextEditingController _searchCtrl = TextEditingController();
   late TabController _tabController;
   Word? _word;
-  List<Meanings> _listMeanings = [];
-  String _errorMessage = '';
   late WordBloc _bloc;
+  List<Word> _recentWords = [];
 
   @override
   Widget appBarWidget() => Text('E-E Dictionary', style: AppStyles.appStyle(color: AppColors.white, fontSize: AppConstants.fontAppBarSize));
@@ -72,9 +74,8 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
           }
         },
         onClearSearch: () => setState(() {
+          setListRecentWords();
           _word = null;
-          _listMeanings = [];
-          _errorMessage = '';
           _tabController.index = 0;
           _bloc.add(ResetSearchWordEvent());
         }),
@@ -87,6 +88,8 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
     super.initState();
     _tabController = TabController(length: sections.length, vsync: this);
     _bloc = BlocProvider.of<WordBloc>(context);
+    setListRecentWords();
+    setState(() {});
   }
 
   @override
@@ -100,6 +103,14 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
   void handleOnTapSectionBar(int index){
     if(_word == null) return;
     _bloc.add(FilterWordTypeEvent(word: _word!, filterType: sections[index]));
+  }
+
+  void setListRecentWords(){
+    final dataString = AppPreferences.recentWordsList;
+    if(dataString.isEmpty) return;
+    List<dynamic> list = json.decode(dataString);
+    List<Word> listWords = List<Word>.from(list.map((i) => Word.fromJson(i)));
+    _recentWords = listWords;
   }
 
   @override
@@ -118,83 +129,134 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
           ),
         ),
         Expanded(
-          child: DefaultTabController(
-            length: sections.length,
-            child: Column(
-              children: [
-                SizedBox(
-                  width: widthScreen,
-                  height: 50,
-                  child: TabBar(
-                    isScrollable: true,
-                    controller: _tabController,
-                    onTap: handleOnTapSectionBar,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    tabAlignment: TabAlignment.start,
-                    indicatorColor: AppColors.crimson,
-                    dividerColor: AppColors.white,
-                    tabs: List.generate(sections.length, (index) => Tab(child: Text(sections[index], style: AppStyles.appStyle()),)),
+          child: BlocBuilder<WordBloc, WordState>(
+            builder: (context, state){
+              if(state is WordInitState){
+                return recentWordSection();
+              }else{
+                return DefaultTabController(
+                  length: sections.length,
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: widthScreen,
+                        height: 50,
+                        child: TabBar(
+                          isScrollable: true,
+                          controller: _tabController,
+                          onTap: handleOnTapSectionBar,
+                          indicatorSize: TabBarIndicatorSize.label,
+                          tabAlignment: TabAlignment.start,
+                          indicatorColor: AppColors.crimson,
+                          dividerColor: AppColors.white,
+                          tabs: List.generate(sections.length, (index) => Tab(child: Text(sections[index], style: AppStyles.appStyle()),)),
+                        ),
+                      ),
+                      Expanded(
+                        child: BlocConsumer<WordBloc, WordState>(
+                          builder: (context, state){
+                            if(state is WordLoadingState){
+                              return Shimmer.fromColors(
+                                baseColor: AppColors.grey.withOpacity(.85),
+                                highlightColor: AppColors.grey.withOpacity(.45),
+                                child: ListView.builder(
+                                  itemCount: 5,
+                                  itemBuilder: (context, index){
+                                    return const DummyWordBox();
+                                  },
+                                ),
+                              );
+                            }else if(state is WordSuccessState){
+                              return ListView.builder(
+                                  itemCount: state.data.data.meanings.length,
+                                  itemBuilder: (context, index){
+                                    return WordBox(word: state.data.data, meanings: state.data.data.meanings[index]);
+                                  }
+                              );
+                            }else if(state is WordFailureState){
+                              return Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
+                                  child: Center(
+                                      child: Text(state.failure.errorMessage, style: AppStyles.appStyle(), textAlign: TextAlign.center,)
+                                  )
+                              );
+                            }else if(state is WordAfterFilerState){
+                              return state.word.meanings.isNotEmpty ? ListView.builder(
+                                  itemCount: state.word.meanings.length,
+                                  itemBuilder: (context, index){
+                                    return WordBox(word: state.word, meanings: state.word.meanings[index]);
+                                  }
+                              ) : Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
+                                  child: Center(
+                                      child: Text('Your word definitions do not have this type', style: AppStyles.appStyle(), textAlign: TextAlign.center,)
+                                  )
+                              );
+                            }else{
+                              return const SizedBox();
+                            }
+                          },
+                          listener: (context, state){
+                            if(state is WordSuccessState){
+                              _word = state.data.data;
+                            }else if(state is WordFailureState){
+                              _word = null;
+                            }
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Expanded(
-                  child: BlocConsumer<WordBloc, WordState>(
-                    builder: (context, state){
-                      if(state is WordLoadingState){
-                        return Shimmer.fromColors(
-                          baseColor: AppColors.grey.withOpacity(.85),
-                          highlightColor: AppColors.grey.withOpacity(.45),
-                          child: ListView.builder(
-                            itemCount: 5,
-                            itemBuilder: (context, index){
-                              return const DummyWordBox();
-                            },
-                          ),
-                        );
-                      }else if(state is WordSuccessState){
-                        return ListView.builder(
-                          itemCount: state.data.data.meanings.length,
-                          itemBuilder: (context, index){
-                            return WordBox(word: state.data.data, meanings: state.data.data.meanings[index]);
-                          }
-                        );
-                      }else if(state is WordFailureState){
-                        return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
-                          child: Center(
-                            child: Text(state.failure.errorMessage, style: AppStyles.appStyle(), textAlign: TextAlign.center,)
-                          )
-                        );
-                      }else if(state is WordAfterFilerState){
-                        return state.word.meanings.isNotEmpty ? ListView.builder(
-                          itemCount: state.word.meanings.length,
-                          itemBuilder: (context, index){
-                            return WordBox(word: state.word, meanings: state.word.meanings[index]);
-                          }
-                        ) : Padding(
-                          padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingGiant),
-                          child: Center(
-                            child: Text('Your word definitions do not have this type', style: AppStyles.appStyle(), textAlign: TextAlign.center,)
-                          )
-                        );
-                      }else{
-                        return const SizedBox();
-                      }
-                    },
-                    listener: (context, state){
-                      if(state is WordSuccessState){
-                        _word = state.data.data;
-                      }else if(state is WordFailureState){
-                        _word = null;
-                      }
-                      setState(() {});
-                    },
-                  ),
-                ),
-              ],
-            ),
+                );
+              }
+            },
           ),
         ),
       ],
+    );
+  }
+
+  Widget recentWordSection(){
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        vertical: AppConstants.paddingDefault,
+        horizontal: AppConstants.paddingDefault,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const AssetIcon(icon: AssetPaths.icClock, size: AppConstants.iconDefaultSize, color: AppColors.onyx),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: AppConstants.paddingSmall,
+                    ),
+                    child: Text('Recent Words', style: AppStyles.appStyle(color: AppColors.onyx),)
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text('See all', style: AppStyles.appStyle(),),
+                  const Icon(Icons.keyboard_arrow_right, color: AppColors.black),
+                ],
+              )
+            ],
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _recentWords.length,
+              itemBuilder: (context, index){
+                return WordBox(word: _recentWords[index], meanings: _recentWords[index].meanings.first, maxLine: 2,);
+              }
+            ),
+          )
+        ],
+      ),
     );
   }
 

@@ -32,6 +32,13 @@ class Word {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'word': word,
+    'phonetic': phonetic,
+    'phonetics': phonetics.isNotEmpty ? List.from(phonetics.map((i) => i.toJson())) : [],
+    'meanings': meanings.isNotEmpty ? List.from(meanings.map((i) => i.toJson())) : [],
+  };
+
   Word copyWith({String? word, List<Meanings>? meanings, List<Phonetics>? phonetics, String? phonetic}){
     return Word(
       word: word ?? this.word,
@@ -54,6 +61,11 @@ class Phonetics {
       text: json['text'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'audio': audio,
+    'text': text,
+  };
 }
 
 class Meanings {
@@ -90,6 +102,13 @@ class Meanings {
       synonyms: synonyms,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'partOfSpeech': partOfSpeech,
+    'definitions': definitions.isNotEmpty ? List.from(definitions.map((i) => i.toJson())) : [],
+    'antonyms': antonyms,
+    'synonyms': synonyms,
+  };
 }
 
 class Definitions {
@@ -104,4 +123,9 @@ class Definitions {
       example: json['example'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'definition': definition,
+    'example': example,
+  };
 }

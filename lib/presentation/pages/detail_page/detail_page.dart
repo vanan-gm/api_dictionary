@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:api_dictionary/commons/app_colors.dart';
 import 'package:api_dictionary/commons/app_constants.dart';
 import 'package:api_dictionary/commons/app_paths.dart';
+import 'package:api_dictionary/commons/app_preferences.dart';
 import 'package:api_dictionary/commons/app_styles.dart';
 import 'package:api_dictionary/commons/asset_paths.dart';
 import 'package:api_dictionary/extensions/string_ext.dart';
@@ -52,16 +55,36 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
     _tabController.dispose();
   }
 
-  void setDataFromType(){
+  /// We will only display meanings based on the type that user chose
+  Future<void> setDataFromType() async{
     for(var item in widget.word.meanings){
       if(item.partOfSpeech.toLowerCase() == widget.chosenType.toLowerCase()){
         _definitions = item.definitions;
         _synonyms = item.synonyms;
         _antonyms = item.antonyms;
+
+        // And we also clone a new instance of word model but only with this type meaning, after that we will store in AppPreference for recent searched words
+        final cloneWord = Word().copyWith(word: widget.word.word, phonetic: widget.word.phonetic, phonetics: widget.word.phonetics, meanings: [item]);
+        final dataString = AppPreferences.recentWordsList;
+        // Get dataString from AppPreference and check if its empty or not, if it is then there's no data stored at all so we will simply save new word to it
+        // But if it is empty indeed, we will have to convert it into list word, after that we check if list contains this word
+        if(dataString.isNotEmpty){
+          List<dynamic> list = json.decode(dataString);
+          List<Word> listWords = List<Word>.from(list.map((i) => Word.fromJson(i)));
+          // We will only save this word if it's not contained in AppPreference, if not then we simply change this word position
+          // into the front of the list and save it to AppPreference again
+          final word = listWords.where((word) => word.phonetic == cloneWord.phonetic && word.meanings.first.partOfSpeech == cloneWord.meanings.first.partOfSpeech);
+          if(word.isNotEmpty) listWords.remove(word.first);
+          listWords.insert(0, cloneWord);
+          AppPreferences.recentWordsList = json.encode(listWords);
+        }else{
+          AppPreferences.recentWordsList = json.encode([cloneWord.toJson()]);
+        }
       }
     }
   }
 
+  /// Iterate through list phonetics then set audio when found one
   Future<void> setDataForAudio() async{
     for(var item in widget.word.phonetics){
       if(item.audio.isNotEmpty){
@@ -98,6 +121,7 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
         children: [
           Text(widget.word.word.upperCaseFirstLetter(), textAlign: TextAlign.center,
             style: AppStyles.appStyle(color: AppColors.white, fontWeight: FontWeight.w600, fontSize: AppConstants.fontGiantSize),),
+          Text('(${widget.chosenType.upperCaseFirstLetter()})', style: AppStyles.appStyle(color: AppColors.white.withOpacity(.7)),),
           Text(widget.word.phonetic, style: AppStyles.appStyle(color: AppColors.white.withOpacity(.7), fontStyle: FontStyle.italic),),
           Padding(
             padding: EdgeInsets.symmetric(
@@ -119,12 +143,12 @@ class _DetailPageState extends BasePageState<DetailPage> with RootPage, SingleTi
                   }
                 }),
                 functionBox(icon: AssetPaths.icEmptyStar, title: 'Save', onTap: (){}),
-                functionBox(icon: AssetPaths.icShare, title: 'Share', onTap: (){
-                  Share.share('${AppPaths.dictionaryUrl}/${widget.word.word}');
-                }),
                 functionBox(icon: AssetPaths.icCopy, title: 'Copy', onTap: () async{
                   await Clipboard.setData(ClipboardData(text: widget.word.word));
                   ToastUtils.showSuccessToast();
+                }),
+                functionBox(icon: AssetPaths.icShare, title: 'Share', onTap: (){
+                  Share.share('${AppPaths.dictionaryUrl}/${widget.word.word}');
                 }),
               ],
             ),
