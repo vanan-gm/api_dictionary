@@ -34,6 +34,8 @@ abstract class BasePageState<Page extends BasePage> extends State<Page>{
 
   bool useFloatingButton() => false;
 
+  bool resizeToAvoidBottomInset() => true;
+
   double? toolbarHeight() => kToolbarHeight;
 
   Widget? flexibleSpace() => Container();
@@ -124,6 +126,7 @@ mixin RootPage<Page extends BasePage> on BasePageState<Page>{
             // statusBarBrightness: statusBarBrightness(),
           ),
         ),
+        resizeToAvoidBottomInset: resizeToAvoidBottomInset(),
         body: SafeArea(
           child: Stack(
             children: [
@@ -144,6 +147,7 @@ mixin RootPage<Page extends BasePage> on BasePageState<Page>{
         ),
         child: Scaffold(
           backgroundColor: backGroundColor(),
+          resizeToAvoidBottomInset: resizeToAvoidBottomInset(),
           body: SafeArea(
             child: Stack(
               children: [

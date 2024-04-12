@@ -18,6 +18,7 @@ import 'package:api_dictionary/presentation/widgets/word_box.dart';
 import 'package:api_dictionary/utils/dialog_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 
 class HomePage extends BasePage {
@@ -54,6 +55,9 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
 
   @override
   bool useLeading() => true;
+
+  @override
+  bool resizeToAvoidBottomInset() => false;
   
   @override
   PreferredSize? bottom() => PreferredSize(
@@ -248,12 +252,24 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
             ],
           ),
           Expanded(
-            child: ListView.builder(
+            child: _recentWords.isNotEmpty ? ListView.builder(
               itemCount: _recentWords.length,
               itemBuilder: (context, index){
                 return WordBox(word: _recentWords[index], meanings: _recentWords[index].meanings.first, maxLine: 2,);
               }
-            ),
+            ) : Center(child: Padding(
+              padding: EdgeInsets.only(bottom: AppConstants.paddingGiant * 3),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Lottie.asset(AssetPaths.ltEmptyFiles, height: 200),
+                    Text('You haven\'t searched anything yet \nSearching something now!!', style: AppStyles.appStyle(), textAlign: TextAlign.center,),
+                  ],
+                ),
+              ),
+            )),
           )
         ],
       ),
