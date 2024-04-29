@@ -13,13 +13,16 @@ import 'package:api_dictionary/models/word.dart';
 import 'package:api_dictionary/presentation/pages/base_page/base_page.dart';
 import 'package:api_dictionary/presentation/widgets/asset_icon.dart';
 import 'package:api_dictionary/presentation/widgets/dummy_word_box.dart';
+import 'package:api_dictionary/presentation/widgets/ripple_effect.dart';
 import 'package:api_dictionary/presentation/widgets/search_box.dart';
 import 'package:api_dictionary/presentation/widgets/word_box.dart';
 import 'package:api_dictionary/utils/dialog_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class HomePage extends BasePage {
   const HomePage({super.key});
@@ -34,6 +37,7 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
   Word? _word;
   late WordBloc _bloc;
   List<Word> _recentWords = [];
+  List<String> _listWords = [];
 
   @override
   Widget appBarWidget() => Text('E-E Dictionary', style: AppStyles.appStyle(color: AppColors.white, fontSize: AppConstants.fontAppBarSize));
@@ -68,21 +72,55 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
         vertical: AppConstants.paddingDefault,
         horizontal: AppConstants.paddingDefault,
       ),
-      child: SearchBox(
+      child: TypeAheadField<String>(
         controller: _searchCtrl,
-        onSearch: () async{
-          if(internetState != InternetState.disconnected){
-            _bloc.add(GetWordDefinitionEvent(word: _searchCtrl.text.trim()));
-          }else{
-            DialogUtils.showNetworkErrorDialog(context);
-          }
+        itemBuilder: (context, data){
+          return RippleEffect(
+            onPressed: () => setState(() {
+              _searchCtrl.text = data.trim();
+              removeFocus();
+            }),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                vertical: AppConstants.paddingSmall,
+              ),
+              child: Text(data, style: AppStyles.appStyle(color: AppColors.black),),
+            ),
+          );
         },
-        onClearSearch: () => setState(() {
-          setListRecentWords();
-          _word = null;
-          _tabController.index = 0;
-          _bloc.add(ResetSearchWordEvent());
-        }),
+        onSelected: (data){},
+        suggestionsCallback: handleFilterWhenSearching,
+        builder: (context, controller, focusNode){
+          return SearchBox(
+            controller: controller,
+            focusNode: focusNode,
+            onSearch: () async{
+              if(internetState != InternetState.disconnected){
+                _bloc.add(GetWordDefinitionEvent(word: _searchCtrl.text.trim()));
+              }else{
+                DialogUtils.showNetworkErrorDialog(context);
+              }
+            },
+            onClearSearch: () => setState(() {
+              setListRecentWords();
+              _word = null;
+              _tabController.index = 0;
+              _bloc.add(ResetSearchWordEvent());
+            }),
+            onVoice: (){
+              DialogUtils().showVoiceDialog(context, (value){
+                if(internetState != InternetState.disconnected){
+                  _bloc.add(GetWordDefinitionEvent(word: value));
+                  setState(() {
+                    _searchCtrl.text = value;
+                  });
+                }else{
+                  DialogUtils.showNetworkErrorDialog(context);
+                }
+              });
+            },
+          );
+        },
       ),
     ),
   );
@@ -93,6 +131,7 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
     _tabController = TabController(length: sections.length, vsync: this);
     _bloc = BlocProvider.of<WordBloc>(context);
     setListRecentWords();
+    getListWordFromAsset();
     setState(() {});
   }
 
@@ -115,6 +154,16 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
     List<dynamic> list = json.decode(dataString);
     List<Word> listWords = List<Word>.from(list.map((i) => Word.fromJson(i)));
     _recentWords = listWords;
+  }
+
+  Future<void> getListWordFromAsset() async{
+    final data = await rootBundle.loadString(AssetPaths.txtFile);
+    _listWords = data.split('\n');
+  }
+
+  Future<List<String>> handleFilterWhenSearching(String key) async{
+    final list = _listWords.where((word) => word.toLowerCase().startsWith(key.toLowerCase())).toList();
+    return list;
   }
 
   @override

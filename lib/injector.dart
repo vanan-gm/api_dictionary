@@ -4,6 +4,7 @@ import 'package:api_dictionary/repository/dictionary_repository.dart';
 import 'package:api_dictionary/repository/dictionary_repository_impl.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 final getIt = GetIt.instance;
 
@@ -16,4 +17,7 @@ Future<void> setUpInjector() async{
 
   // Bloc
   getIt.registerFactory<WordBloc>(() => WordBloc(repository: getIt()));
+
+  // Speech to Text
+  getIt.registerLazySingleton<SpeechToText>(() => SpeechToText());
 }
