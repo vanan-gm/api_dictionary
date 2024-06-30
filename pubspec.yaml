@@ -26,6 +26,7 @@ dependencies:
   flutter_native_splash: ^2.3.10
   flutter_typeahead: ^5.2.0
   responsive_sizer: ^3.3.1
+  permission_handler: ^11.3.1
 
 flutter_native_splash:
   android: true

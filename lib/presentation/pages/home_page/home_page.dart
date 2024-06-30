@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
@@ -112,23 +113,38 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
               _tabController.index = 0;
               _bloc.add(ResetSearchWordEvent());
             }),
-            onVoice: (){
-              DialogUtils().showVoiceDialog(context, (value){
-                if(internetState != InternetState.disconnected){
-                  _bloc.add(GetWordDefinitionEvent(word: value));
-                  setState(() {
-                    _searchCtrl.text = value;
-                  });
-                }else{
-                  DialogUtils.showNetworkErrorDialog(context);
-                }
-              });
+            onVoice: () async{
+              final microStatus = await Permission.microphone.status;
+              if(microStatus.isPermanentlyDenied) return;
+              if(microStatus.isDenied){
+                await Permission.microphone
+                  .onDeniedCallback((){
+                    return;
+                })
+                  .onGrantedCallback(handleWhenMicroIsPermitted)
+                  .request();
+              }else{
+                handleWhenMicroIsPermitted();
+              }
             },
           );
         },
       ),
     ),
   );
+
+  void handleWhenMicroIsPermitted(){
+    DialogUtils().showVoiceDialog(context, (value){
+      if(internetState != InternetState.disconnected){
+        _bloc.add(GetWordDefinitionEvent(word: value));
+        setState(() {
+          _searchCtrl.text = value;
+        });
+      }else{
+        DialogUtils.showNetworkErrorDialog(context);
+      }
+    });
+  }
 
   @override
   void initState() {
