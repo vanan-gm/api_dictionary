@@ -4,6 +4,7 @@ import 'package:api_dictionary/injector.dart';
 import 'package:api_dictionary/presentation/pages/home_page/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:responsive_sizer/responsive_sizer.dart';
 
 Future<void> main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,17 +18,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<WordBloc>(
-          create: (_) => getIt<WordBloc>(),
-        )
-      ],
-      child: const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'E-E Dictionary',
-        home: HomePage(),
-      ),
+    return ResponsiveSizer(
+      builder: (context, orientation, screenType) {
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider<WordBloc>(
+              create: (_) => getIt<WordBloc>(),
+            )
+          ],
+          child: const MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'E-E Dictionary',
+            home: HomePage(),
+          ),
+        );
+      }
     );
   }
 }

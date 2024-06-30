@@ -81,8 +81,13 @@ class _HomePageState extends BasePageState<HomePage> with RootPage, SingleTicker
               removeFocus();
             }),
             child: Container(
+              width: widthScreen,
               padding: EdgeInsets.symmetric(
                 vertical: AppConstants.paddingSmall,
+              ),
+              margin: EdgeInsets.symmetric(horizontal: AppConstants.paddingSmall),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.black, width: .05)),
               ),
               child: Text(data, style: AppStyles.appStyle(color: AppColors.black),),
             ),

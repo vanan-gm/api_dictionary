@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:responsive_sizer/responsive_sizer.dart';
 
 class AppConstants{
   AppConstants._();
 
-  static MediaQueryData get mediaQuery => MediaQueryData.fromView(WidgetsBinding.instance.platformDispatcher.views.single);
-  static double get widthScreen => mediaQuery.size.width;
-  static double get heightScreen => mediaQuery.size.height;
+  // Here we will get screen size (100% of width and height)
+  static double get widthScreen => Adaptive.w(100);
+  static double get heightScreen => Adaptive.h(100);
 
   // FontSizes
   static const double fontSmallSize = 12;
